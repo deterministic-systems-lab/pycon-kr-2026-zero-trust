@@ -60,10 +60,22 @@ Your work is safe — commit it first, or `git stash`.
 tutorial/     the code you complete (broker, scope, tokenizer, clean room)
 tests/        checkpoint tests, one per module
 docs/         CHEATSHEET.md (every command you will type), WRAP_UP.md (where moto stops)
-              FACILITATOR.md, SPEAKER_NOTES.md, TROUBLESHOOTING.md (for the instructor)
 setup/        SETUP.md and the offline install scripts
 data/         20 fake clinical records
 ```
+
+## Facilitators
+
+Instructor material — run-of-show, speaker notes, troubleshooting — lives on the
+[`facilitator`](https://github.com/deterministic-systems-lab/pycon-kr-2026-zero-trust/tree/facilitator)
+branch, deliberately off `main` because it gives away Modules D and E.
+
+```bash
+git clone -b facilitator https://github.com/deterministic-systems-lab/pycon-kr-2026-zero-trust.git facilitator-notes
+```
+
+Attending rather than teaching? Ignore that branch. Reading it first will spoil
+the best part of the afternoon.
 
 ## Scope, honestly
 

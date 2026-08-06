@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    # `facilitator` is an orphan branch of instructor notes with no code on it.
+    # Running the test job there would fail on a missing pyproject.toml.
+    branches: ["**", "!facilitator"]
     tags: ["checkpoint-*"]
   pull_request:
   workflow_dispatch:
