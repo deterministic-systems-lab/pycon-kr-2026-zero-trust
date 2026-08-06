@@ -45,8 +45,18 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 ```
 
-Your prompt now starts with `(.venv)`. If it does not, the next steps will
-install into the wrong place.
+Your prompt now starts with `(.venv)`.
+
+**Before you install anything, run one check:**
+
+```bash
+which python
+```
+
+It must print a path inside `.venv`. If it does not — especially if you see
+`anaconda` or `miniconda` — stop and read
+[Check you are in the right environment](#check-you-are-in-the-right-environment).
+Installing from the wrong environment can break other projects on your machine.
 
 ### 4. Install
 
@@ -107,6 +117,17 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .venv\Scripts\activate
 ```
 
+**Before you install anything, run one check:**
+
+```powershell
+where python
+```
+
+The first line must be a path inside `.venv`. If it is not — especially if you
+see `anaconda` or `miniconda` — stop and read
+[Check you are in the right environment](#check-you-are-in-the-right-environment).
+Installing from the wrong environment can break other projects on your machine.
+
 ### 4. Install
 
 **With network:**
@@ -130,6 +151,60 @@ pytest tests\test_00_smoke.py
 ```
 
 Expect `3 passed`.
+
+---
+
+## Check you are in the right environment
+
+Do this before you install anything. It takes five seconds, and it prevents the
+one failure that damages work unrelated to this tutorial.
+
+```bash
+which python        # Windows: where python
+pip -V
+```
+
+**Both must point inside your `.venv`**, like this:
+
+```
+/path/to/pycon-kr-2026-zero-trust/.venv/bin/python
+pip 25.x from /path/to/pycon-kr-2026-zero-trust/.venv/lib/python3.12/site-packages/pip
+```
+
+If either points somewhere else — your system Python, `/usr/bin`, or anything
+with `anaconda` or `miniconda` in the path — **stop**. Installing now would put
+this tutorial's packages into a different environment, and it can upgrade
+libraries that your other projects depend on.
+
+The prompt is not proof. `(.venv)` and `(base)` both look like "an environment
+is active". Only one of them is the right one. `which python` is the real check.
+
+### If you use Anaconda or Miniconda
+
+conda puts its own Python first on your PATH, so a bare `pip` can install into
+`base` even when `.venv` looks active. Deactivate conda first:
+
+```bash
+conda deactivate          # repeat until no (base) or env name is in your prompt
+python3.12 -m venv .venv
+source .venv/bin/activate
+which python              # must now be inside .venv
+```
+
+If `python3.12` is not found once conda is deactivated, install it from
+[python.org](https://www.python.org/downloads/). Do not run
+`conda install python=3.12` — that rebuilds your base environment and is a much
+bigger change than this tutorial needs.
+
+### If you use uv
+
+```bash
+uv venv --python 3.12
+source .venv/bin/activate
+uv pip install -e .
+```
+
+Everything else in this guide works unchanged.
 
 ---
 

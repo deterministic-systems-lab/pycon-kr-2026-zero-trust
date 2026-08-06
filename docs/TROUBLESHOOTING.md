@@ -72,6 +72,25 @@ Present from the solution. Nobody will know.
 
 ---
 
+### "It installed fine, but pytest cannot find the packages"
+
+The packages went into a different environment. Almost always conda: `base` is
+first on PATH, so `pip` resolved to conda's pip while `.venv` looked active.
+
+```bash
+which python && pip -V
+```
+
+Both must be inside `.venv`. Fix: `conda deactivate`, rebuild the venv,
+reinstall.
+
+**Check this before anything else when someone says "no module named moto".**
+It does not only break the tutorial — it can upgrade packages in their conda
+environment and break unrelated work on their laptop. Ask `which python` first,
+every time.
+
+---
+
 ## Module A — the harness
 
 ### `InvalidAccessKeyId: The AWS Access Key Id you provided does not exist in our records`
