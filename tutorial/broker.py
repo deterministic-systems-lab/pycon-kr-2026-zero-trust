@@ -142,9 +142,12 @@ class AWSSTSBroker(IdentityBroker):
         region: str = "us-east-1",
         external_id: str | None = None,
     ) -> None:
-        # TODO(you): reject ttl < 900 with a ValueError. STS will not issue a
-        # credential shorter than 900 seconds, so failing here beats failing at
-        # the API call. Put the number 900 in the message — the test checks for it.
+        if ttl < 900:
+            raise ValueError(
+                f"STS minimum TTL is 900 seconds. Got {ttl}. "
+                "AWS rejects anything shorter. If you need a 30-second credential, "
+                "you need a provider with revocable leases, not STS."
+            )
 
         self._role_arn = role_arn
         self._ttl = ttl
@@ -169,21 +172,18 @@ class AWSSTSBroker(IdentityBroker):
 
         The tests in Module D assert this shape directly, because — as you will
         find out — nothing else can.
-
-        Shape to build::
-
-            {
-                "Version": "2012-10-17",
-                "Statement": [
-                    {"Effect": "Allow", "Action": [...], "Resource": [...]}
-                ],
-            }
         """
-        # TODO(you): map `action` through ACTION_MAP. Anything not in the map is
-        #            already a full S3 action string — pass it through unchanged.
-        # TODO(you): return the policy document. One statement. One action. One
-        #            resource. No wildcards anywhere.
-        raise NotImplementedError("Module B: build the inline session policy.")
+        api_action = ACTION_MAP.get(action, action)
+        return {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": [api_action],
+                    "Resource": [resource],
+                }
+            ],
+        }
 
     def issue(
         self,
@@ -199,25 +199,46 @@ class AWSSTSBroker(IdentityBroker):
             resource:       S3 object ARN, "arn:aws:s3:::bucket/key".
             action:         "read", "write", "delete", "tag", or a full S3
                             action string such as "s3:GetObject".
-
-        Steps:
-
-          1. Get the STS client with self._get_sts_client().
-          2. Build the session policy with self._build_policy().
-          3. Name the session "tutorial-" + the first 32 characters of the
-             transaction ID. AWS caps RoleSessionName at 64, so truncate.
-          4. Call sts.assume_role() with RoleArn, RoleSessionName, Policy and
-             DurationSeconds. Policy is a JSON *string*, not a dict.
-             Add ExternalId only when self._external_id is set.
-          5. Wrap the response in an EphemeralCredential. The token holds
-             AccessKeyId, SecretAccessKey and SessionToken. `expiry` is a unix
-             timestamp — the response gives you a datetime.
-             `scope` is f"{action}:{resource}". `lease_id` stays None: STS
-             issues no revocation handle, so there is nothing to store.
-             Put session_name and role_arn in `metadata`.
         """
-        # TODO(you): steps 1-5 above. Run `pytest tests/test_b_broker.py` as you go.
-        raise NotImplementedError("Module B: issue a scoped credential.")
+        sts = self._get_sts_client()
+        policy = self._build_policy(resource, action)
+
+        # pymayfly uses the "mayfly-" prefix. Ours says "tutorial-" so you can
+        # tell your sessions apart from the library's in CloudTrail.
+        session_name = f"tutorial-{transaction_id[:32]}"
+
+        assume_kwargs: dict[str, Any] = dict(
+            RoleArn=self._role_arn,
+            RoleSessionName=session_name,
+            Policy=json.dumps(policy),
+            DurationSeconds=self._ttl,
+        )
+        if self._external_id:
+            assume_kwargs["ExternalId"] = self._external_id
+
+        response = sts.assume_role(**assume_kwargs)
+        creds = response["Credentials"]
+
+        logger.info(
+            "issued credential txn=%s scope=%s:%s session=%s",
+            transaction_id,
+            action,
+            resource,
+            session_name,
+        )
+
+        return EphemeralCredential(
+            token={
+                "AccessKeyId": creds["AccessKeyId"],
+                "SecretAccessKey": creds["SecretAccessKey"],
+                "SessionToken": creds["SessionToken"],
+            },
+            expiry=int(creds["Expiration"].timestamp()),
+            scope=f"{action}:{resource}",
+            transaction_id=transaction_id,
+            lease_id=None,  # STS issues no revocation handle. There is nothing to store.
+            metadata={"session_name": session_name, "role_arn": self._role_arn},
+        )
 
     def revoke(self, credential: EphemeralCredential) -> None:
         """
@@ -237,11 +258,11 @@ class AWSSTSBroker(IdentityBroker):
 
         Control 3 is the one people forget. It is also the strongest.
         """
-        # TODO(you): log the no-op at debug level and return. Do not raise —
-        # transaction_scope calls this in a `finally` block, and an exception
-        # there would mask whatever real error the body was already raising.
-        raise NotImplementedError("Module B: log the no-op and return None.")
+        logger.debug(
+            "revoke() is a no-op for STS. txn=%s ttl_remaining=%ds",
+            credential.transaction_id,
+            credential.ttl,
+        )
 
     def blast_radius(self, credential: EphemeralCredential) -> str:
-        # TODO(you): return f"Single S3 object: {credential.scope}"
-        raise NotImplementedError("Module B: describe what a leak exposes.")
+        return f"Single S3 object: {credential.scope}"
