@@ -1,0 +1,26 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.DS_Store
+
+# Attendee credentials must never reach a commit. This repo needs none.
+.env
+*.pem
+credentials
+
+# The wheelhouse is 46 MB — too big to commit, so it ships as a GitHub Release
+# asset. Build it with setup/make_wheelhouse.sh. See wheels/README.md.
+wheels/*
+!wheels/README.md
+
+# Facilitator-only, and both spoil Modules D and E for anyone who clones:
+# the build spec describes the IAM trap, CLAUDE.md describes the pymayfly reveal.
+pycon-kr-2026-tutorial-spec.md
+CLAUDE.md
+
+# uv lockfile — attendees use pip, and pyproject.toml already pins exactly.
+uv.lock

@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["checkpoint-*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Always runs. No account, no secrets, no network at test time.
+  unit:
+    name: Unit (moto only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Smoke test
+        run: pytest tests/test_00_smoke.py
+
+      - name: Full suite
+        run: pytest
+
+  # The checkpoint tags are the attendee escape hatches. If one of them is
+  # broken, somebody rejoins the tutorial into a red suite. Verify every tag.
+  checkpoints:
+    name: Checkpoint tags
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Each tag passes its cumulative tests
+        run: |
+          set -euo pipefail
+          declare -A CUMULATIVE=(
+            [checkpoint-a]="tests/test_00_smoke.py tests/test_a_harness.py"
+            [checkpoint-b]="tests/test_00_smoke.py tests/test_a_harness.py tests/test_b_broker.py"
+            [checkpoint-c]="tests/test_00_smoke.py tests/test_a_harness.py tests/test_b_broker.py tests/test_c_clean_room.py"
+            [checkpoint-d]="tests/"
+          )
+          for tag in checkpoint-a checkpoint-b checkpoint-c checkpoint-d; do
+            if ! git rev-parse -q --verify "refs/tags/${tag}" > /dev/null; then
+              echo "::error::Tag ${tag} is missing. Attendees use it as an escape hatch."
+              exit 1
+            fi
+            echo "::group::${tag}"
+            git checkout -q "${tag}"
+            pytest ${CUMULATIVE[$tag]}
+            echo "::endgroup::"
+          done
+
+  # Gated. Runs only where the secrets exist — never on forks, never on an
+  # attendee clone. Skipped, not failed, when they are absent: a job that fails
+  # on forks trains everybody to ignore red CI.
+  aws-integration:
+    name: Integration (real AWS)
+    runs-on: ubuntu-latest
+    needs: unit
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check whether integration secrets are configured
+        id: gate
+        env:
+          ROLE_ARN: ${{ secrets.AWS_INTEGRATION_ROLE_ARN }}
+        run: |
+          if [ -z "${ROLE_ARN}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "No AWS integration secrets. Skipping — this is expected on forks."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.configured == 'true'
+        with:
+          python-version: "3.12"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: steps.gate.outputs.configured == 'true'
+        with:
+          role-to-assume: ${{ secrets.AWS_CI_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install
+        if: steps.gate.outputs.configured == 'true'
+        run: pip install -e .
+
+      - name: The negative test moto cannot run
+        if: steps.gate.outputs.configured == 'true'
+        env:
+          AWS_INTEGRATION_ROLE_ARN: ${{ secrets.AWS_INTEGRATION_ROLE_ARN }}
+          AWS_INTEGRATION_BUCKET: ${{ secrets.AWS_INTEGRATION_BUCKET }}
+          AWS_INTEGRATION_KEY_ALLOWED: ${{ secrets.AWS_INTEGRATION_KEY_ALLOWED }}
+          AWS_INTEGRATION_KEY_FORBIDDEN: ${{ secrets.AWS_INTEGRATION_KEY_FORBIDDEN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: pytest -m aws_integration -v
