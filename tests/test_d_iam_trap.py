@@ -81,22 +81,25 @@ ONE_OBJECT = "arn:aws:s3:::dirty-bucket/R-002.json"
 
 def test_policy_has_exactly_one_statement(broker):
     policy = broker._build_policy(ONE_OBJECT, "read")
-    # TODO(you): assert the document has exactly one statement.
-    # One transaction, one grant. Extra statements are extra blast radius.
-    pytest.fail("TODO(you): assert exactly one statement. Delete this line when done.")
+    assert len(policy["Statement"]) == 1, (
+        "One transaction, one grant. Extra statements are extra blast radius."
+    )
 
 
 def test_policy_grants_exactly_one_action(broker):
     statement = broker._build_policy(ONE_OBJECT, "read")["Statement"][0]
-    # TODO(you): assert Effect is "Allow" and Action is exactly ["s3:GetObject"].
-    pytest.fail("TODO(you): assert exactly one action. Delete this line when done.")
+    assert statement["Effect"] == "Allow"
+    assert statement["Action"] == ["s3:GetObject"], (
+        f"A read credential gets s3:GetObject and nothing else. Got {statement['Action']}."
+    )
 
 
 def test_policy_grants_exactly_one_resource(broker):
     statement = broker._build_policy(ONE_OBJECT, "read")["Statement"][0]
-    # TODO(you): assert Resource is exactly [ONE_OBJECT]. Not a prefix. Not a
-    # bucket. The one object this transaction is about.
-    pytest.fail("TODO(you): assert exactly one resource. Delete this line when done.")
+    assert statement["Resource"] == [ONE_OBJECT], (
+        f"Resource must be the one triggering object ARN, not a prefix and not a "
+        f"bucket. Got {statement['Resource']}."
+    )
 
 
 @pytest.mark.parametrize("action", ["read", "write", "delete", "tag"])
@@ -109,23 +112,25 @@ def test_policy_contains_no_wildcards(broker, action):
     the message. This is the test Module B should have had.
     """
     policy = broker._build_policy(ONE_OBJECT, action)
-    # TODO(you): assert no "*" appears anywhere in the rendered policy.
-    # Hint: json.dumps(policy) turns the whole document into one string, so one
-    # check covers a wildcard in the action AND a wildcard in the resource.
-    # Put the offending policy in the assertion message. You will thank yourself.
-    pytest.fail("TODO(you): assert no wildcards. Delete this line when done.")
+    rendered = json.dumps(policy)
+    assert "*" not in rendered, (
+        f"Wildcard found in the session policy for action {action!r}:\n"
+        f"{json.dumps(policy, indent=2)}\n"
+        "A wildcard here means a leaked credential reaches more than the one "
+        "object this transaction is about."
+    )
 
 
 def test_policy_resource_is_an_object_not_a_bucket(broker):
     """`arn:aws:s3:::bucket` grants the bucket. `arn:aws:s3:::bucket/key` grants one object."""
     resource = broker._build_policy(ONE_OBJECT, "read")["Statement"][0]["Resource"][0]
-    # TODO(you): assert this is an object ARN, not a bucket ARN.
-    pytest.fail("TODO(you): assert object-level ARN. Delete this line when done.")
+    assert "/" in resource.removeprefix("arn:aws:s3:::"), (
+        f"{resource!r} is a bucket ARN, not an object ARN."
+    )
 
 
 def test_policy_version_is_pinned(broker):
-    # TODO(you): assert the policy Version is "2012-10-17".
-    pytest.fail("TODO(you): assert the policy version. Delete this line when done.")
+    assert broker._build_policy(ONE_OBJECT, "read")["Version"] == "2012-10-17"
 
 
 # ---------------------------------------------------------------------------
@@ -138,21 +143,45 @@ def test_policy_version_is_pinned(broker):
 
 def test_assume_role_receives_the_policy_document(broker, dirty_key):
     """Spy on the STS call and assert the built policy round-trips into it."""
-    # TODO(you): wrap broker._sts.assume_role with a spy that records its kwargs
-    # and forwards to the real one. Call _get_sts_client() first — the client is
-    # lazy and does not exist until something asks for it.
-    # Then issue a credential and assert:
-    #   - a "Policy" kwarg was passed at all
-    #   - json.loads(captured["Policy"]) equals broker._build_policy(...)
-    #   - DurationSeconds is 900 and RoleSessionName starts with "tutorial-"
-    pytest.fail("TODO(you): spy on assume_role. Delete this line when done.")
+    captured: dict = {}
+    real_client = broker._get_sts_client()
+    real_assume_role = real_client.assume_role
+
+    def spy(**kwargs):
+        captured.update(kwargs)
+        return real_assume_role(**kwargs)
+
+    broker._sts.assume_role = spy
+
+    resource = object_arn(DIRTY_BUCKET, dirty_key)
+    broker.issue("txn-spy", resource, "read")
+
+    assert "Policy" in captured, (
+        "issue() called assume_role without a Policy kwarg. The session policy "
+        "was never sent, so the assumed role's full permissions apply."
+    )
+    assert json.loads(captured["Policy"]) == broker._build_policy(resource, "read")
+    assert captured["DurationSeconds"] == 900
+    assert captured["RoleSessionName"].startswith("tutorial-")
 
 
 def test_assume_role_is_called_once_per_transaction(broker, dirty_key):
     """Credential reuse across transactions defeats the whole protocol."""
-    # TODO(you): spy again, issue two credentials for the same resource, and
-    # assert two calls with two distinct RoleSessionNames.
-    pytest.fail("TODO(you): assert one session per transaction. Delete this line when done.")
+    calls = []
+    real_assume_role = broker._get_sts_client().assume_role
+
+    def spy(**kwargs):
+        calls.append(kwargs["RoleSessionName"])
+        return real_assume_role(**kwargs)
+
+    broker._sts.assume_role = spy
+
+    resource = object_arn(DIRTY_BUCKET, dirty_key)
+    broker.issue("txn-one", resource, "read")
+    broker.issue("txn-two", resource, "read")
+
+    assert len(calls) == 2
+    assert len(set(calls)) == 2, "Two transactions must produce two distinct sessions."
 
 
 # ---------------------------------------------------------------------------
