@@ -69,23 +69,25 @@ def process_record(
 
     Returns:
         The tokenized record that was written.
-
-    MODULE C — this is the exercise. About ten lines.
-
-    Two transaction_scope blocks, tokenizer in between:
-
-      1. Open a read scope on object_arn(DIRTY_BUCKET, key). Inside it, build a
-         client with build_s3_client(credential, region) and read the object.
-         json.loads the body.
-      2. Outside the scope, tokenize the record with tokenize_record(record, salt).
-         The credential's job is done — do not hold it while you compute.
-      3. Open a write scope on object_arn(CLEAN_BUCKET, key). Inside it, build a
-         fresh client and put the tokenized record under the same key.
-      4. Return the tokenized record.
-
-    Resist the urge to use one credential for both. The read credential cannot
-    write and the write credential cannot read, and that is the entire argument
-    of this tutorial in four lines of code.
     """
-    # TODO(you): steps 1-4 above. Run `pytest tests/test_c_clean_room.py` as you go.
-    raise NotImplementedError("Module C: wire the scopes and the tokenizer together.")
+    with transaction_scope(
+        broker, resource=object_arn(DIRTY_BUCKET, key), action="read"
+    ) as credential:
+        s3 = build_s3_client(credential, region)
+        raw = s3.get_object(Bucket=DIRTY_BUCKET, Key=key)["Body"].read()
+
+    record = json.loads(raw)
+    clean = tokenize_record(record, salt)
+
+    with transaction_scope(
+        broker, resource=object_arn(CLEAN_BUCKET, key), action="write"
+    ) as credential:
+        s3 = build_s3_client(credential, region)
+        s3.put_object(
+            Bucket=CLEAN_BUCKET,
+            Key=key,
+            Body=json.dumps(clean).encode(),
+            ContentType="application/json",
+        )
+
+    return clean
