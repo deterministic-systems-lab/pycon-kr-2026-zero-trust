@@ -48,26 +48,15 @@ def s3():
     """
     A mocked S3 with both buckets, and a client to talk to it.
 
-    MODULE A — this is the exercise.
-
     Everything inside `with mock_aws()` is intercepted in-process. No network,
     no account, no charges. Every boto3 client created inside this block —
     including ones created deep inside tutorial code — hits the mock.
-
-    Four lines of body. Take your time on where the `with` block starts and
-    ends, because that boundary is the whole trick.
     """
-    # TODO(you): open a `with mock_aws():` block. Everything below goes inside it.
-    # TODO(you): build a boto3 S3 client for REGION.
-    # TODO(you): create DIRTY_BUCKET and CLEAN_BUCKET.
-    # TODO(you): `yield` the client — yield, not return, so the mock stays open
-    #            for the duration of the test and closes cleanly afterwards.
-    raise NotImplementedError(
-        "Module A: write the moto fixture in tests/conftest.py.\n"
-        "Run `pytest tests/test_a_harness.py` as you go — six tests, and they "
-        "tell you what is missing.\n"
-        "Stuck? `git stash && git checkout checkpoint-a` shows the answer."
-    )
+    with mock_aws():
+        client = boto3.client("s3", region_name=REGION)
+        client.create_bucket(Bucket=DIRTY_BUCKET)
+        client.create_bucket(Bucket=CLEAN_BUCKET)
+        yield client
 
 
 @pytest.fixture
