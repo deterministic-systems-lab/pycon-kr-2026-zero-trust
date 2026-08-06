@@ -5,6 +5,14 @@ PyCon Korea 2026 · 180 minutes · ~30 attendees · Seoul
 Everything here is for the person at the front of the room. Attendees do not read
 this file.
 
+Three files, three jobs:
+
+- **This one** — logistics. Timings, cut lines, what each module needs.
+- **[`SPEAKER_NOTES.md`](SPEAKER_NOTES.md)** — the talk track. What to actually
+  say, beat by beat. Keep it on the lectern.
+- **[`TROUBLESHOOTING.md`](TROUBLESHOOTING.md)** — symptom lookup for when a
+  laptop goes red. Every error in it was reproduced against the real stack.
+
 ---
 
 ## Run of show
@@ -161,9 +169,19 @@ Expected: `6 passed`.
 | Symptom | Cause |
 |---|---|
 | `NoSuchBucket` | Forgot `create_bucket`, or created only one of the two |
-| Tests pass then fail in a different order | `mock_aws()` at module level instead of inside the fixture |
-| `Could not connect to the endpoint` | Client built outside the `with` block |
+| `InvalidAccessKeyId: The AWS Access Key Id you provided does not exist in our records` | **The mock has already closed.** Almost always `return client` instead of `yield client` — the `with` block exits the moment the fixture returns. Also caused by `mock_aws()` at module level. |
 | `KeyCount` assertion fails | Reusing one bucket across tests instead of a fresh fixture |
+
+**Read the `InvalidAccessKeyId` message out loud when someone hits it.** That
+error came back from *real AWS*. A closed mock does not fail safe — boto3 goes
+to the internet. The only reason it failed is the autouse `aws_credentials`
+fixture putting `testing`/`testing` in the environment. That fixture is not
+ceremony, and this is the proof.
+
+Note for your own confidence: building a client *outside* the `with` block and
+calling it *inside* works fine. moto patches at the botocore layer, so existing
+clients get intercepted too. The failure is about *when the call happens*, not
+where the client was made.
 
 **Cut line:** if you are 10 minutes behind at 0:30, put the finished fixture on
 screen at 0:45 and have them copy it. The fixture is not the lesson; the broker
@@ -211,7 +229,9 @@ Expected: `15 passed`.
 |---|---|
 | `ParamValidationError: Invalid length for parameter RoleSessionName` | Empty transaction ID |
 | `Policy` rejected | Passing the dict, not `json.dumps(policy)` |
-| `credential.ttl` is 0 | Using `DurationSeconds` as expiry instead of reading `Expiration` from the response |
+| `TypeError: unsupported operand type(s) for -: 'datetime.datetime' and 'int'` | Passed `Expiration` straight into `expiry`. It is a datetime; `expiry` wants `int(...timestamp())`. |
+| `credential.ttl` is 0 | Used `DurationSeconds` (900) as the expiry instead of the absolute `Expiration` |
+| `ParamValidationError: Invalid value for parameter DurationSeconds, value: 60, valid min value: 900` | Skipped the TTL guard. botocore enforces the floor too — the guard exists to fail earlier with a message that says what to do instead. |
 | `test_action_mapping` fails on `s3:ListBucket` | Raising on unknown actions instead of passing them through |
 | Everything green suspiciously fast | They wrote `Resource: ["*"]`. **Say nothing.** This is Module D and it is better if they arrive there by their own hand. |
 
@@ -259,7 +279,7 @@ tokenizer between them.
 |---|---|
 | `NoSuchKey` on the clean bucket | Wrote to `DIRTY_BUCKET` |
 | Name still in the clear | Tokenized after writing, or passed the wrong dict |
-| `TypeError: Object of type bytes is not JSON serializable` | Forgot `json.loads` on the body |
+| `TypeError: cannot convert dictionary update sequence element #0 to a sequence` | Forgot `json.loads` — raw bytes reached `tokenize_record`, and `dict(bytes)` fails |
 | Tokens differ between runs of the same test | Calling `new_salt()` inside the loop instead of taking the fixture |
 
 **Cut line:** this module is already the shortest. If you are behind at 2:00, put

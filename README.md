@@ -59,7 +59,8 @@ Your work is safe — commit it first, or `git stash`.
 ```
 tutorial/     the code you complete (broker, scope, tokenizer, clean room)
 tests/        checkpoint tests, one per module
-docs/         FACILITATOR.md (run-of-show), CHEATSHEET.md (every command), WRAP_UP.md
+docs/         CHEATSHEET.md (every command you will type), WRAP_UP.md (where moto stops)
+              FACILITATOR.md, SPEAKER_NOTES.md, TROUBLESHOOTING.md (for the instructor)
 setup/        SETUP.md and the offline install scripts
 data/         20 fake clinical records
 ```
