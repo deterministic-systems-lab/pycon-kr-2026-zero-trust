@@ -28,7 +28,7 @@ catches it, and then fix it properly.
 Requires Python 3.12.
 
 ```bash
-git clone https://github.com/deterministicsystemslab/pycon-kr-2026-zero-trust.git
+git clone https://github.com/deterministic-systems-lab/pycon-kr-2026-zero-trust.git
 cd pycon-kr-2026-zero-trust
 python3.12 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate

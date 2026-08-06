@@ -9,7 +9,7 @@ in git history.
 Download `wheelhouse.zip` from the Releases page and unzip it into this
 directory:
 
-    https://github.com/deterministicsystemslab/pycon-kr-2026-zero-trust/releases
+    https://github.com/deterministic-systems-lab/pycon-kr-2026-zero-trust/releases
 
 Then run `setup/install_offline.sh`. Full instructions in
 [`../setup/SETUP.md`](../setup/SETUP.md).

@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "PyCon Korea 2026 tutorial: build a zero-trust data pipeline in Python, no AWS account required."
 readme = "README.md"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Tristan McKinnon", email = "tristan@deterministicsystems.dev" }]
+authors = [{ name = "Tristan McKinnon" }]
 requires-python = "==3.12.*"
 
 dependencies = [

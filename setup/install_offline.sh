@@ -19,7 +19,7 @@ The wheelhouse ships either inside the repo (wheels/) or as wheelhouse.zip on
 the GitHub Releases page. If you cloned and wheels/ is empty, download
 wheelhouse.zip, unzip it into wheels/, and run this again.
 
-  https://github.com/deterministicsystemslab/pycon-kr-2026-zero-trust/releases
+  https://github.com/deterministic-systems-lab/pycon-kr-2026-zero-trust/releases
 
 With network, you do not need any of this:  pip install -e .
 MSG

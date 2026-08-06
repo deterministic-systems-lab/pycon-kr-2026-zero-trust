@@ -34,7 +34,7 @@ Expect `Python 3.12.x`. If the command is not found:
 ### 2. Get the repo
 
 ```bash
-git clone https://github.com/deterministicsystemslab/pycon-kr-2026-zero-trust.git
+git clone https://github.com/deterministic-systems-lab/pycon-kr-2026-zero-trust.git
 cd pycon-kr-2026-zero-trust
 ```
 
@@ -99,7 +99,7 @@ If it is missing, install 3.12 from https://www.python.org/downloads/ and tick
 ### 2. Get the repo
 
 ```powershell
-git clone https://github.com/deterministicsystemslab/pycon-kr-2026-zero-trust.git
+git clone https://github.com/deterministic-systems-lab/pycon-kr-2026-zero-trust.git
 cd pycon-kr-2026-zero-trust
 ```
 
@@ -137,7 +137,7 @@ pip install -e .
 ```
 
 **Without network:** download `wheelhouse.zip` from the
-[Releases page](https://github.com/deterministicsystemslab/pycon-kr-2026-zero-trust/releases),
+[Releases page](https://github.com/deterministic-systems-lab/pycon-kr-2026-zero-trust/releases),
 unzip it into the `wheels\` folder, then:
 
 ```powershell
@@ -214,7 +214,7 @@ Everything needed is in a wheelhouse — a folder of pre-downloaded packages. Th
 works from a USB stick with wifi switched off. Measured: 8.6 seconds.
 
 1. Download `wheelhouse.zip` from the
-   [Releases page](https://github.com/deterministicsystemslab/pycon-kr-2026-zero-trust/releases).
+   [Releases page](https://github.com/deterministic-systems-lab/pycon-kr-2026-zero-trust/releases).
 2. Unzip it so the `.whl` files sit directly in `wheels/`.
 3. Run:
 
