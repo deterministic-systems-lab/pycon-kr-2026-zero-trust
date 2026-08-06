@@ -211,7 +211,7 @@ Everything else in this guide works unchanged.
 ## Offline install
 
 Everything needed is in a wheelhouse — a folder of pre-downloaded packages. This
-works from a USB stick with wifi switched off. Measured: 8.6 seconds.
+works from a USB stick with wifi switched off. Measured: about 10 seconds.
 
 1. Download `wheelhouse.zip` from the
    [Releases page](https://github.com/deterministic-systems-lab/pycon-kr-2026-zero-trust/releases).

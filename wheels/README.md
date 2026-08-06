@@ -28,7 +28,8 @@ Rebuild before the conference, with network:
 
 Measured 2026-08-05: 41 wheels, 46 MB, covering macOS arm64, macOS x86_64,
 manylinux2014 x86_64 and Windows amd64 on Python 3.12. Offline install from a
-cold venv took 8.6 seconds; the 60-second budget has plenty of room.
+cold venv took 9-10 seconds across repeated runs; the 60-second budget has
+plenty of room.
 
 Most of the bulk is `botocore` (15 MB) and four platform builds of
 `cryptography` (~5 MB each). Neither is optional — botocore is boto3, and moto
