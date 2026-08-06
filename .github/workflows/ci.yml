@@ -9,8 +9,16 @@ on:
 
 jobs:
   # Always runs. No account, no secrets, no network at test time.
+  #
+  # This job does NOT run the full suite. On main the checkpoint tests are stubs
+  # and are supposed to fail — that is the attendee starting state, not a
+  # regression. Running `pytest` here would make the default branch permanently
+  # red and train everyone to ignore it.
+  #
+  # The full suite is verified where it is actually meant to pass: at
+  # checkpoint-d, in the `checkpoints` job below.
   unit:
-    name: Unit (moto only)
+    name: Unit (attendee start state)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,11 +30,16 @@ jobs:
       - name: Install
         run: pip install -e .
 
-      - name: Smoke test
+      - name: Smoke test must pass
         run: pytest tests/test_00_smoke.py
 
-      - name: Full suite
-        run: pytest
+      # Stubs must be syntactically valid. A collection error means an attendee
+      # sees a wall of import tracebacks instead of a readable assertion.
+      - name: Every test collects without error
+        run: pytest --collect-only -q
+
+      - name: Finale skips cleanly without pymayfly
+        run: pytest tests/test_e_finale.py -q -rs
 
   # The checkpoint tags are the attendee escape hatches. If one of them is
   # broken, somebody rejoins the tutorial into a red suite. Verify every tag.
