@@ -38,8 +38,19 @@ jobs:
       - name: Every test collects without error
         run: pytest --collect-only -q
 
+      # pytest exits 5 ("no tests collected") when a module skips at import time,
+      # which is exactly what the finale is supposed to do without pymayfly.
+      # Treat 0 and 5 as success; anything else means the skip broke.
       - name: Finale skips cleanly without pymayfly
-        run: pytest tests/test_e_finale.py -q -rs
+        run: |
+          set +e
+          pytest tests/test_e_finale.py -q -rs
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ] && [ "$code" -ne 5 ]; then
+            echo "::error::test_e_finale.py should skip cleanly when pymayfly is absent (pytest exit $code)"
+            exit 1
+          fi
 
   # The checkpoint tags are the attendee escape hatches. If one of them is
   # broken, somebody rejoins the tutorial into a red suite. Verify every tag.
